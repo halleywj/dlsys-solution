@@ -195,6 +195,8 @@ class MatMulOp(Op):
         """Given values of input nodes, return result of matrix multiplication."""
         """TODO: Your code here"""
         assert len(input_vals) == 2
+        assert type(input_vals[0]) == np.ndarray
+        assert type(input_vals[1]) == np.ndarray
         if (node.matmul_attr_trans_A):
             A = input_vals[0].T
         else:
@@ -203,6 +205,7 @@ class MatMulOp(Op):
             B = input_vals[1].T
         else:
             B = input_vals[1]
+        assert (np.shape(A)[1]) == (np.shape(B)[0])
         return np.dot(A, B)
 
     def gradient(self, node, output_grad):
