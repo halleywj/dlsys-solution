@@ -288,7 +288,7 @@ class LogOp(Op):
     def __call__(self, node_A):
         new_node = Op.__call__(self)
         new_node.inputs = [node_A]
-        new_node.name = "Log(%s)".format(node_A.name)
+        new_node.name = "Log(%s)" % (node_A.name)
         return new_node
 
     def compute(self, node, input_vals):
@@ -302,7 +302,7 @@ class ExpOp(Op):
     def __call__(self, node_A):
         new_node = Op.__call__(self)
         new_node.inputs = [node_A]
-        new_node.name = "exp(%s)".format(node_A.name)
+        new_node.name = "exp(%s)" % (node_A.name)
         return new_node
 
     def compute(self, node, input_vals):
@@ -458,6 +458,7 @@ class Executor:
                 for index, item in enumerate(node.inputs):
                     input_vals.append(node_to_val_map[item])
                 node_to_val_map[node] = node.op.compute(node, input_vals)
+                # print(node + ' ' + node_to_val_map[node])
 
         # Collect node values.
         node_val_results = [node_to_val_map[node] for node in self.eval_node_list]
