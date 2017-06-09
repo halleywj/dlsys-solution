@@ -26,7 +26,7 @@ class logstic(object):
         length = np.shape(X)[0]
         self.num_feature = np.shape(X)[1]
         executor = ad.Executor([loss, grad_w])
-        self.coef_ = np.random.rand(1, self.num_feature)
+        self.coef_ = np.random.rand(1, self.num_feature) / 1000.0
         for i in range(self.maxiter):
             grad = np.zeros((1, self.num_feature))
             loss = 0
