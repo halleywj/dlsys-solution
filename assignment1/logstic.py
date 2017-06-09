@@ -9,12 +9,12 @@ class logstic(object):
         self.labels = labels
         self.learning_rate = learning_rate
 
-    def fit(X, Y):
+    def fit(self, X, Y):
         x = ad.Variable(name = 'x')
         w = ad.Variable(name = 'w')
         y = ad.Variable(name = 'y')
 
-        p = 1 / (1 + ad.exp_op(-1 * ad.matmul_op(w, x, False, True)))
+        p = 1 / (1 + ad.exp_op(-1 * ad.matmul_op(w, x)))
 
         # cross entropy
         loss = -1 * y * ad.log_op(p) + (1 - y) * ad.log_op(1 - p)
@@ -22,13 +22,15 @@ class logstic(object):
         grad_w, = ad.gradients(loss, [w])
 
         # SGD
-        l = np.shape(X)[0]
+        length = np.shape(X)[0]
+        num_feature = np.shape(X)[1]
         executor = ad.Executor([loss, grad_w])
-        self.coef_ = np.zeros(np.shape(X)[1])
-        for i in range(maxiter):
-            t = random.choice(range(l))
-            loss_val, grad_w_val = executor.run(feed_dict = {x : X[t], w : self.coef_, y : Y[t]})
+        self.coef_ = np.random.rand(1, num_feature)
+        for i in range(self.maxiter):
+            t = random.choice(range(length))
+            loss_val, grad_w_val = executor.run(feed_dict = {x : X[t].reshape((num_feature, 1)), w : self.coef_, y : Y[t]})
             self.coef_ = self.coef_ - self.learning_rate * grad_w_val
+            print(self.coef_)
 
     def predict(self, X):
         p = np.dot(self.coef_, X)
