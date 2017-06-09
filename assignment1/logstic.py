@@ -4,7 +4,7 @@ import random
 
 class logstic(object):
 
-    def __init__(self, maxiter=1000, learning_rate=0.0005 ,labels=np.array([0, 1]), batch=500):
+    def __init__(self, maxiter=1000, learning_rate=0.01 ,labels=np.array([0, 1]), batch=500):
         self.maxiter = maxiter
         self.labels = labels
         self.learning_rate = learning_rate
@@ -26,16 +26,21 @@ class logstic(object):
         length = np.shape(X)[0]
         self.num_feature = np.shape(X)[1]
         executor = ad.Executor([loss, grad_w])
-        self.coef_ = np.zeros((1, self.num_feature))
+        self.coef_ = np.random.rand(1, self.num_feature)
         for i in range(self.maxiter):
             grad = np.zeros((1, self.num_feature))
             loss = 0
             for j in range(self.batch):
                 t = random.choice(range(length))
-                loss_val, grad_w_val = executor.run(feed_dict = {x : X[t].reshape((self.num_feature, 1)), w : self.coef_, y : Y[t]})
+                x_val = X[t].reshape((self.num_feature, 1))
+                if Y[t] == self.labels[0]:
+                    y_val = 0
+                else:
+                    y_val = 1
+                loss_val, grad_w_val = executor.run(feed_dict = {x : x_val, w : self.coef_, y : y_val})
                 grad = grad + grad_w_val
                 loss = loss + loss_val
-            self.coef_ = self.coef_ - self.learning_rate * grad
+            self.coef_ = self.coef_ - self.learning_rate * grad / self.batch
             if i % 100 == 0:
                 print(loss)
                 # print(grad)

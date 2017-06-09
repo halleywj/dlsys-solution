@@ -1,13 +1,14 @@
 import logstic as lg
 import numpy as np
 from mnist import MNIST
+from sklearn import preprocessing
 
 mndata = MNIST('./data')
 images_train, labels_train = mndata.load_training()
-images_train = np.array(images_train) / 256.0
+images_train = preprocessing.scale(np.array(images_train), axis=1)
 labels_train = np.array(labels_train)
 images_test, labels_test = mndata.load_testing()
-images_test = np.array(images_test) / 256.0
+images_test = preprocessing.scale(np.array(images_test), axis=1)
 labels_test = np.array(labels_test)
 
 cls_s = []
@@ -20,7 +21,6 @@ def single_cls(a, b):
     lg_cls.fit(train_images, train_labels)
     cls_s.append(lg_cls)
     print('cls ' + str(a) + ' ' + str(b) + ' done')
-
 
 def predict(X):
     t = np.zeros(10)
@@ -35,8 +35,8 @@ for i in range(9):
 l = np.shape(images_test)[0]
 acc = 0
 for i in range(l):
-    t = predict(labels_test[i])
-    if t == test_labels[i]:
+    t = predict(images_test[i])
+    if t == labels_test[i]:
         acc += 1
 
 print(acc * 1.0 / l)
