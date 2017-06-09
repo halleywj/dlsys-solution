@@ -29,12 +29,40 @@ class Node(object):
             new_node = add_byconst_op(self, other)
         return new_node
 
+    def __sub__(self, other):
+        if isinstance(other, Node):
+            new_node = sub_op(self, other)
+        else:
+            new_node = sub_byconst_op(self, other)
+        return new_node
+
+    def __rsub__(self, other):
+        if isinstance(other, Node):
+            new_node = sub_op(self, other)
+        else:
+            new_node = sub_constby_op(self, other)
+        return new_node
+
     def __mul__(self, other):
         """TODO: Your code here"""
         if isinstance(other, Node):
             new_node = mul_op(self, other)
         else:
             new_node = mul_byconst_op(self, other)
+        return new_node
+
+    def __div__(self, other):
+        if isinstance(other, Node):
+            new_node = div_op(self, other)
+        else:
+            new_node = div_byconst_op(self, other)
+        return new_node
+
+    def __rdiv__(self, other):
+        if isinstance(other, Node):
+            new_node = div_op(self, other)
+        else:
+            new_node = div_constby_op(self, other)
         return new_node
 
     # Allow left-hand-side add and multiply.
@@ -129,6 +157,50 @@ class AddByConstOp(Op):
         """Given gradient of add node, return gradient contribution to input."""
         return [output_grad]
 
+class SubOp(Op):
+    def __call__(self, node_A, node_B):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_A, node_B]
+        new_node.name = "(%s-%s)" % (node_A.name, node_B.name)
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert len(input_vals) == 2
+        return input_vals[0] - input_vals[1]
+
+    def gradient(self, node, output_grad):
+        return [output_grad, -1 * output_grad]
+
+class SubByConstOp(Op):
+    def __call__(self, node_A, const_val):
+        new_node = Op.__call__(self)
+        new_node.const_attr = const_val
+        new_node.inputs = [node_A]
+        new_node.name = "(%s-%s)" % (node_A.name, str(const_val))
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert len(input_vals) == 1
+        return input_vals[0] - node.const_attr
+
+    def gradient(self, node, output_grad):
+        return [output_grad]
+
+class SubConstByOp(Op):
+    def __call__(self, node_A, const_val):
+        new_node = Op.__call__(self)
+        new_node.const_attr = const_val
+        new_node.inputs = [node_A]
+        new_node.name = "(%s-%s)" % (str(const_val), node_A.name)
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert len(input_vals) == 1
+        return node.const_attr - input_vals[0]
+
+    def gradient(self, node, output_grad):
+        return [-1 * output_grad]
+
 class MulOp(Op):
     """Op to element-wise multiply two nodes."""
     def __call__(self, node_A, node_B):
@@ -167,6 +239,78 @@ class MulByConstOp(Op):
         """Given gradient of multiplication node, return gradient contribution to input."""
         """TODO: Your code here"""
         return [node.const_attr * output_grad]
+
+class DivOp(Op):
+    def __call__(self, node_A, node_B):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_A, node_B]
+        new_node.name = "(%s/%s)" % (node_A.name, node_B.name)
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert len(input_vals) == 2
+        return input_vals[0] / input_vals[1]
+
+    def gradient(self, node, output_grad):
+        return [1 / node.inputs[1] * output_grad, -1 * node.inputs[0] / (node.inputs[1] * node.inputs[1]) * output_grad]
+
+class DivByConstOp(Op):
+    def __call__(self, node_A, const_val):
+        new_node = Op.__call__(self)
+        new_node.const_attr = const_val
+        new_node.inputs = [node_A]
+        new_node.name = "(%s/%s)" % (node_A.name, str(const_val))
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert len(input_vals) == 1
+        return input_vals[0] / node.const_attr
+
+    def gradient(self, node, output_grad):
+        return [output_grad / node.const_attr]
+
+class DivConstByOp(Op):
+    def __call__(self, node_A, const_val):
+        new_node = Op.__call__(self)
+        new_node.const_attr = const_val
+        new_node.inputs = [node_A]
+        new_node.name = "(%s/%s)" % (str(const_val), node_A.name)
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert len(input_vals) == 1
+        return node.const_attr / input_vals[0]
+
+    def gradient(self, node, output_grad):
+        return [-1 * node.const_attr / (node.inputs[0] * node.inputs[0]) * output_grad]
+
+class LogOp(Op):
+    def __call__(self, node_A):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_A]
+        new_node.name = "Log(%s)".format(node_A.name)
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert (isinstance(input_vals[0], np.ndarray))
+        return np.log(input_vals[0])
+
+    def gradient(self, node, output_grad):
+        return [(1.0 / node.inputs[0]) * output_grad]
+
+class ExpOp(Op):
+    def __call__(self, node_A):
+        new_node = Op.__call__(self)
+        new_node.inputs = [node_A]
+        new_node.name = "exp(%s)".format(node_A.name)
+        return new_node
+
+    def compute(self, node, input_vals):
+        assert (isinstance(input_vals[0], np.ndarray))
+        return np.exp(input_vals[0])
+
+    def gradient(self, node, output_grad):
+        return [exp_op(node.inputs[0]) * output_grad]
 
 class MatMulOp(Op):
     """Op to matrix multiply two nodes."""
@@ -267,13 +411,21 @@ class OnesLikeOp(Op):
 
 # Create global singletons of operators.
 add_op = AddOp()
+sub_op = SubOp()
 mul_op = MulOp()
+div_op = DivOp()
 add_byconst_op = AddByConstOp()
+sub_byconst_op = SubByConstOp()
+sub_constby_op = SubConstByOp()
 mul_byconst_op = MulByConstOp()
+div_byconst_op = DivByConstOp()
+div_constby_op = DivConstByOp()
 matmul_op = MatMulOp()
 placeholder_op = PlaceholderOp()
 oneslike_op = OnesLikeOp()
 zeroslike_op = ZerosLikeOp()
+log_op = LogOp()
+exp_op = ExpOp()
 
 class Executor:
     """Executor computes values for a given subset of nodes in a computation graph."""
