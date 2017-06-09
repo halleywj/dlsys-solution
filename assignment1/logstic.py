@@ -14,7 +14,7 @@ class logstic(object):
         w = ad.Variable(name = 'w')
         y = ad.Variable(name = 'y')
 
-        p = 1 / (1 + ad.exp_op(-1 * ad.matmul_op(w, x)))
+        p = 1 / (1 + ad.exp_op(-1 * ad.matmul_op(w, x, False, True)))
 
         # cross entropy
         loss = -1 * y * ad.log_op(p) + (1 - y) * ad.log_op(1 - p)
@@ -23,6 +23,7 @@ class logstic(object):
 
         # SGD
         l = np.shape(X)[0]
+        executor = ad.Executor([loss, grad_w])
         self.coef_ = np.zeros(np.shape(X)[1])
         for i in range(maxiter):
             t = random.choice(range(l))
