@@ -323,7 +323,7 @@ class MatMulOp(Op):
         assert len(input_shapes) == 2
         if ((node.matmul_attr_trans_A is False) and
                 (node.matmul_attr_trans_B is False)):
-            return((input_shapesh[0][0], input_shapes[1][1]))
+            return((input_shapes[0][0], input_shapes[1][1]))
         elif ((node.matmul_attr_trans_A is True) and
                 (node.matmul_attr_trans_B is False)):
             return((input_shapes[0][1], input_shapes[1][1]))
@@ -631,7 +631,7 @@ class Executor(object):
         for node in feed_shapes:
             self.node_to_shape_map[node] = feed_shapes[node]
         for node in self.topo_order:
-            if node in node_to_shape_map:
+            if node in self.node_to_shape_map:
                 continue
             input_shapes = []
             for inputs in node.inputs:
@@ -658,10 +658,11 @@ class Executor(object):
         """TODO: Your code here"""
         if self.memory_pool == None:
             self.memory_pool = []
-        for node, arr in self.node_to_arr_map:
-            self.memory_pool.append(arr)
+        if self.node_to_arr_map:
+            for node, arr in self.node_to_arr_map:
+                self.memory_pool.append(arr)
         self.node_to_arr_map = {}
-        for node, shape in self.node_to_shape_map:
+        for node, shape in self.node_to_shape_map.items():
             arr_node = None
             if node in feed_shapes:
                 continue
@@ -672,7 +673,7 @@ class Executor(object):
                     break
             if arr_node == None:
                 arr_node = ndarray.empty(shape, ctx=self.ctx)
-            node_to_arr_map[node] = arr_node
+            self.node_to_arr_map[node] = arr_node
 
     def run(self, feed_dict, convert_to_numpy_ret_vals=False):
         """
