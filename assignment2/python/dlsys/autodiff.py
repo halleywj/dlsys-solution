@@ -613,6 +613,7 @@ class Executor(object):
         self.node_to_shape_map = None
         self.node_to_arr_map = None
         self.feed_shapes = None
+        self.memory_pool = None
 
     def infer_shape(self, feed_shapes):
         """Given shapes of feed_dict nodes, infer shape for all nodes in graph.
@@ -626,6 +627,16 @@ class Executor(object):
         feed_shapes: node->shapes mapping for feed_dict nodes.
         """
         """TODO: Your code here"""
+        self.node_to_shape_map = {}
+        for node in feed_shapes:
+            self.node_to_shape_map[node] = feed_shapes[node]
+        for node in self.topo_order:
+            if node in node_to_shape_map:
+                continue
+            input_shapes = []
+            for inputs in node.inputs:
+                input_shapes.append(self.node_to_shape_map[inputs])
+            self.node_to_shape_map[node] = node.op.infer_shape(node, input_shapes)
 
     def memory_plan(self, feed_shapes):
         """Allocates ndarray.NDArray for every node except feed_dict nodes.
@@ -645,6 +656,23 @@ class Executor(object):
         feed_shapes: node->shapes mapping for feed_dict nodes.
         """
         """TODO: Your code here"""
+        if self.memory_pool == None:
+            self.memory_pool = []
+        for node, arr in self.node_to_arr_map:
+            self.memory_pool.append(arr)
+        self.node_to_arr_map = {}
+        for node, shape in self.node_to_shape_map:
+            arr_node = None
+            if node in feed_shapes:
+                continue
+            for arr in self.memory_pool:
+                if arr.shape == shape:
+                    arr_node = arr
+                    self.memory_pool.remove(arr)
+                    break
+            if arr_node == None:
+                arr_node = ndarray.empty(shape, ctx=self.ctx)
+            node_to_arr_map[node] = arr_node
 
     def run(self, feed_dict, convert_to_numpy_ret_vals=False):
         """
