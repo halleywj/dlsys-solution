@@ -52,193 +52,6 @@ __global__ void matrix_softmax_cross_entropy_kernel(int nrow, int ncol,
   }
 }
 
-__global__ void matrix_softmax_kernel(int nrow, int ncol, const float *input_data, float *output_data) {
-    int y = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
-    if (y >= nrow) {
-        return;
-    }
-    input_a += y * ncol;
-    input_b += y * ncol;
-    float maxval = *input_a;
-    // Find max for a row.
-    for (int x = 1; x < ncol; ++x) {
-        maxval = max(maxval, input_a[x]);
-    }
-    // Deduct by max for a row, and raise to exp.
-    float sum = 0;
-    for (int x = 0; x < ncol; ++x) {
-        sum += exp(input_a[x] - maxval);
-    }
-    for (int x = 0; x < ncol; ++x) {
-        output_data[x] = exp(input_data[x] - maxval) / sum;
-    }
-}
-
-__global__ void relu_kernel(int n, const float *input_data, float *output_data) {
-    int y = blockIdx.x * blockDim.x + threadIdx.x;
-    if (y > n) {
-        return;
-    }
-    if (input_data[y] > 0) {
-        output_data[y] = input_data[y];
-    }
-    else {
-        output_data[y] = 0;
-    }
-}
-
-__global__ void relu_gradient_kernel(int n, const float *input_data, const float *in_grad_data, float *output_data) {
-    int y = blockIdx.x * blockDim.x + threadIdx.x;
-    if (y > n) {
-        return;
-    }
-    if (input_data[y] > 0) {
-        output_data[y] = in_grad_data[y];
-    }
-    else {
-        output_data[y] = 0;
-    }
-}
-
-__global__ void array_set_kernel(int n, float *array_data, float value) {
-    int y = blockIdx.x * blockDim.x + threadIdx.x;
-    if (y > n) {
-        return;
-    }
-    array_data[y] = value;
-}
-
-__global__ void broadcast_kernel(int n, const float *input_data, float *output_data) {
-    int y = blockIdx.x * blockDim.x + threadIdx.x;
-    if (y > n) {
-        return;
-    }
-    output_data += n * blockIdx.y;
-    output_data[y] = input_data[y];
-}
-
-__global__ void reduce_sum_axis_zero_kernel(int n, int reduce_size, const float *input_data, float *output_data) {
-    int y = blockIdx.x * blockDim.x + threadIdx.x;
-    if (y > n) {
-        return;
-    }
-    float value = 0;
-    for (int i = threadIdx.y; i < reduce_size; i += blockDim.y) {
-        value += input_data[i * n + y];
-    }
-}
-
-__global__ void matrix_add_kernel(int n, const float *input_data_a, const float *input_data_b, float *output_data) {
-    int y = blockIdx.x * blockDim.x + threadIdx.x;
-    if (y > n) {
-        return;
-    }
-    output_data[y] = input_data_a[y] + input_data_b[y];
-}
-
-__global__ void matrix_add_by_const_kernel(int n, const float *input_data, float val, float *output_data) {
-    int y = blockIdx.x * blockDim.x + threadIdx.x;
-    if (y > n) {
-        return;
-    }
-    output_data[y] = input_data[y] + val;
-}
-
-__global__ void matrix_mul_kernel(int n, const float *input_data_a, const float *input_data_b, float *output_data) {
-    int y = blockIdx.x * blockDim.x + threadIdx.x;
-    if (y > n) {
-        return;
-    }
-    output_data[y] = input_data_a[y] * input_data_b[y];
-}
-
-__global__ void matrix_mul_by_const_kernel(int n, const float *input_data, float val, float *output_data) {
-    int y = blockIdx.x * blockDim.x + threadIdx.x;
-    if (y > n) {
-        return;
-    }
-    output_data[y] = input_data[y] * val;
-}
-
-cublasHandle_t cublas_handle = NULL;
-
-int DLGpuArraySet(DLArrayHandle arr, float value) { /* TODO: Your code here */
-    int n = 1;
-    for(int i = 0; i < arr->dim; i++) {
-        n *= arr->shape[i];
-    }
-    float *array_data = (float *)arr->data;
-    dim3 threads(1024, 1, 1);
-    dim3 blocks((n + 1024 - 1) / 1024, 1, 1);
-    array_set_kernel<<<blocks, threads>>>(n, array_data, value);
-    return 0;
-}
-
-int DLGpuBroadcastTo(const DLArrayHandle input, DLArrayHandle output) {
-  /* TODO: Your code here */
-    int n = 1;
-    for(int i = 0; i < arr->dim; i++) {
-        n *= arr->shape[i];
-    }
-
-    return 0;
-}
-
-int DLGpuReduceSumAxisZero(const DLArrayHandle input, DLArrayHandle output) {
-  /* TODO: Your code here */
-  return 0;
-}
-
-int DLGpuMatrixElementwiseAdd(const DLArrayHandle matA,
-                              const DLArrayHandle matB, DLArrayHandle output) {
-  /* TODO: Your code here */
-  return 0;
-}
-
-int DLGpuMatrixElementwiseAddByConst(const DLArrayHandle input, float val,
-                                     DLArrayHandle output) {
-  /* TODO: Your code here */
-  return 0;
-}
-
-int DLGpuMatrixElementwiseMultiply(const DLArrayHandle matA,
-                                   const DLArrayHandle matB,
-                                   DLArrayHandle output) {
-  /* TODO: Your code here */
-  return 0;
-}
-
-int DLGpuMatrixMultiplyByConst(const DLArrayHandle input, float val,
-                               DLArrayHandle output) {
-  /* TODO: Your code here */
-  return 0;
-}
-
-int DLGpuMatrixMultiply(const DLArrayHandle matA, bool transposeA,
-                        const DLArrayHandle matB, bool transposeB,
-                        DLArrayHandle matC) {
-  /* TODO: Your code here */
-  // Hint: use cublas
-  // cublas assume matrix is column major
-  return 0;
-}
-
-int DLGpuRelu(const DLArrayHandle input, DLArrayHandle output) {
-  /* TODO: Your code here */
-  return 0;
-}
-
-int DLGpuReluGradient(const DLArrayHandle input, const DLArrayHandle in_grad,
-                      DLArrayHandle output) {
-  /* TODO: Your code here */
-  return 0;
-}
-
-int DLGpuSoftmax(const DLArrayHandle input, DLArrayHandle output) {
-  /* TODO: Your code here */
-  return 0;
-}
-
 int DLGpuSoftmaxCrossEntropy(const DLArrayHandle input_a,
                              const DLArrayHandle input_b,
                              DLArrayHandle output) {
@@ -267,5 +80,190 @@ int DLGpuSoftmaxCrossEntropy(const DLArrayHandle input_a,
   // memory size
   matrix_softmax_cross_entropy_kernel<<<1, threads, nrow * sizeof(float)>>>(
       nrow, ncol, input_data_a, input_data_b, output_data);
+  return 0;
+}
+
+__global__ void array_set_kernel(int n, float *array_data, float value) {
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
+    if (y > n) {
+        return;
+    }
+    array_data[y] = value;
+}
+
+int DLGpuArraySet(DLArrayHandle arr, float value) { /* TODO: Your code here */
+    int n = 1;
+    for(int i = 0; i < arr->dim; i++) {
+        n *= arr->shape[i];
+    }
+    float *array_data = (float *)arr->data;
+    dim3 threads(1024, 1, 1);
+    dim3 blocks((n + 1024 - 1) / 1024, 1, 1);
+    array_set_kernel<<<blocks, threads>>>(n, array_data, value);
+    return 0;
+}
+
+__global__ void broadcast_kernel(int n, const float *input_data, float *output_data) {
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
+    if (y > n) {
+        return;
+    }
+    output_data += n * blockIdx.y;
+    output_data[y] = input_data[y];
+}
+
+int DLGpuBroadcastTo(const DLArrayHandle input, DLArrayHandle output) {
+  /* TODO: Your code here */
+    int n = 1;
+    for(int i = 0; i < arr->dim; i++) {
+        n *= arr->shape[i];
+    }
+
+    return 0;
+}
+
+__global__ void reduce_sum_axis_zero_kernel(int n, int reduce_size, const float *input_data, float *output_data) {
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
+    if (y > n) {
+        return;
+    }
+    float value = 0;
+    for (int i = threadIdx.y; i < reduce_size; i += blockDim.y) {
+        value += input_data[i * n + y];
+    }
+}
+
+int DLGpuReduceSumAxisZero(const DLArrayHandle input, DLArrayHandle output) {
+  /* TODO: Your code here */
+  return 0;
+}
+
+__global__ void matrix_add_kernel(int n, const float *input_data_a, const float *input_data_b, float *output_data) {
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
+    if (y > n) {
+        return;
+    }
+    output_data[y] = input_data_a[y] + input_data_b[y];
+}
+
+int DLGpuMatrixElementwiseAdd(const DLArrayHandle matA,
+                              const DLArrayHandle matB, DLArrayHandle output) {
+  /* TODO: Your code here */
+  return 0;
+}
+
+__global__ void matrix_add_by_const_kernel(int n, const float *input_data, float val, float *output_data) {
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
+    if (y > n) {
+        return;
+    }
+    output_data[y] = input_data[y] + val;
+}
+
+int DLGpuMatrixElementwiseAddByConst(const DLArrayHandle input, float val,
+                                     DLArrayHandle output) {
+  /* TODO: Your code here */
+  return 0;
+}
+
+__global__ void matrix_mul_kernel(int n, const float *input_data_a, const float *input_data_b, float *output_data) {
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
+    if (y > n) {
+        return;
+    }
+    output_data[y] = input_data_a[y] * input_data_b[y];
+}
+
+int DLGpuMatrixElementwiseMultiply(const DLArrayHandle matA,
+                                   const DLArrayHandle matB,
+                                   DLArrayHandle output) {
+  /* TODO: Your code here */
+  return 0;
+}
+
+__global__ void matrix_mul_by_const_kernel(int n, const float *input_data, float val, float *output_data) {
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
+    if (y > n) {
+        return;
+    }
+    output_data[y] = input_data[y] * val;
+}
+
+int DLGpuMatrixMultiplyByConst(const DLArrayHandle input, float val,
+                               DLArrayHandle output) {
+  /* TODO: Your code here */
+  return 0;
+}
+
+int DLGpuMatrixMultiply(const DLArrayHandle matA, bool transposeA,
+                        const DLArrayHandle matB, bool transposeB,
+                        DLArrayHandle matC) {
+  /* TODO: Your code here */
+  // Hint: use cublas
+  // cublas assume matrix is column major
+  return 0;
+}
+
+__global__ void relu_kernel(int n, const float *input_data, float *output_data) {
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
+    if (y > n) {
+        return;
+    }
+    if (input_data[y] > 0) {
+        output_data[y] = input_data[y];
+    }
+    else {
+        output_data[y] = 0;
+    }
+}
+
+int DLGpuRelu(const DLArrayHandle input, DLArrayHandle output) {
+  /* TODO: Your code here */
+  return 0;
+}
+
+__global__ void relu_gradient_kernel(int n, const float *input_data, const float *in_grad_data, float *output_data) {
+    int y = blockIdx.x * blockDim.x + threadIdx.x;
+    if (y > n) {
+        return;
+    }
+    if (input_data[y] > 0) {
+        output_data[y] = in_grad_data[y];
+    }
+    else {
+        output_data[y] = 0;
+    }
+}
+
+int DLGpuReluGradient(const DLArrayHandle input, const DLArrayHandle in_grad,
+                      DLArrayHandle output) {
+  /* TODO: Your code here */
+  return 0;
+}
+
+__global__ void matrix_softmax_kernel(int nrow, int ncol, const float *input_data, float *output_data) {
+    int y = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
+    if (y >= nrow) {
+        return;
+    }
+    input_a += y * ncol;
+    input_b += y * ncol;
+    float maxval = *input_a;
+    // Find max for a row.
+    for (int x = 1; x < ncol; ++x) {
+        maxval = max(maxval, input_a[x]);
+    }
+    // Deduct by max for a row, and raise to exp.
+    float sum = 0;
+    for (int x = 0; x < ncol; ++x) {
+        sum += exp(input_a[x] - maxval);
+    }
+    for (int x = 0; x < ncol; ++x) {
+        output_data[x] = exp(input_data[x] - maxval) / sum;
+    }
+}
+
+int DLGpuSoftmax(const DLArrayHandle input, DLArrayHandle output) {
+  /* TODO: Your code here */
   return 0;
 }
