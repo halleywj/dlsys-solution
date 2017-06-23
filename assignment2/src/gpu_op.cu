@@ -93,49 +93,95 @@ __global__ void array_set_kernel(int n, float *array_data, float value) {
 
 int DLGpuArraySet(DLArrayHandle arr, float value) { /* TODO: Your code here */
     int n = 1;
-    for(int i = 0; i < arr->dim; i++) {
+    for (int i = 0; i < arr->dim; i++) {
         n *= arr->shape[i];
     }
     float *array_data = (float *)arr->data;
-    dim3 threads(1024, 1, 1);
-    dim3 blocks((n + 1024 - 1) / 1024, 1, 1);
+    dim3 threads;
+    dim3 blocks;
+    if (n <= 1024) {
+        threads.x = n;
+        blocks.x = 1;
+    }
+    else {
+        threads.x = 1024;
+        blocks.x = (size + 1023) / 1024;
+    }
     array_set_kernel<<<blocks, threads>>>(n, array_data, value);
     return 0;
 }
 
-__global__ void broadcast_kernel(int n, const float *input_data, float *output_data) {
+__global__ void broadcast_kernel(int n, int out, const float *input_data, float *output_data) {
     int y = blockIdx.x * blockDim.x + threadIdx.x;
     if (y > n) {
         return;
     }
-    output_data += n * blockIdx.y;
-    output_data[y] = input_data[y];
+    for (int i = y; i < out;i += n) {
+        output_data[i] = input_data[n];
+    }
 }
 
 int DLGpuBroadcastTo(const DLArrayHandle input, DLArrayHandle output) {
   /* TODO: Your code here */
     int n = 1;
-    for(int i = 0; i < arr->dim; i++) {
-        n *= arr->shape[i];
+    for (int i = 0; i < input->dim; i++) {
+        n *= input->shape[i];
     }
-
+    int out = 1;
+    for (int i = 0; i < output->dim; i++) {
+        out *= output->shape[i];
+    }
+    dim3 blocks;
+    dim3 threads;
+    float *output_data = (float *)output->data;
+    const float *input_data = (float *)input->data;
+    if (n <= 1024) {
+        threads.x = n;
+        blocks.x = 1;
+    }
+    else {
+        threads.x = 1024;
+        blocks.x = (n + 1023) / 1024;
+    }
+    broadcast_kernel<<<blocks, threads>>>(n, out, input_data, output_data);
     return 0;
 }
 
-__global__ void reduce_sum_axis_zero_kernel(int n, int reduce_size, const float *input_data, float *output_data) {
+__global__ void reduce_sum_axis_zero_kernel(int n, int out, const float *input_data, float *output_data) {
     int y = blockIdx.x * blockDim.x + threadIdx.x;
     if (y > n) {
         return;
     }
-    float value = 0;
-    for (int i = threadIdx.y; i < reduce_size; i += blockDim.y) {
-        value += input_data[i * n + y];
+    output[y] = 0;
+    for (int i = y; i < out; i += out) {
+        output_data[y] += input_data[i];
     }
 }
 
 int DLGpuReduceSumAxisZero(const DLArrayHandle input, DLArrayHandle output) {
   /* TODO: Your code here */
-  return 0;
+    int n =1;
+    for (int i = 0; i < input->dim; i++) {
+        n *= input->shape[i];
+    }
+    int out = 1;
+    for (int i = 0; i < output->dim; i++) {
+        out *= output->shape[i];
+    }
+    dim3 blocks;
+    dim3 threads;
+    float *output_data = (float *)output->data;
+    const float *input_data = (const float *)input->data;
+    if (n <= 1024) {
+        threads.x = n;
+        blocks.x = 1;
+    }
+    else {
+        threads.x = 1024;
+        blocks.x = (n + 1023) / 1024;
+    }
+    reduce_sum_axis_zero_kernel(n, out, input_data, output_data);
+    return 0;
 }
 
 __global__ void matrix_add_kernel(int n, const float *input_data_a, const float *input_data_b, float *output_data) {
@@ -149,7 +195,27 @@ __global__ void matrix_add_kernel(int n, const float *input_data_a, const float 
 int DLGpuMatrixElementwiseAdd(const DLArrayHandle matA,
                               const DLArrayHandle matB, DLArrayHandle output) {
   /* TODO: Your code here */
-  return 0;
+    int n = 1;
+    for (int i = 0; i < matA->dim; i++) {
+        n *= matA->shape[i];
+    }
+    dim3 blocks;
+    dim3 threads;
+    const float *input_data_a = (const float *)matA->data;
+    const float *input_data_b = (const float *)matB->data;
+    float *output_data = (float *)output->data;
+    dim3 blocks;
+    dim3 threads;
+    if (n <= 1024) {
+        threads.x = n;
+        blocks.x = 1;
+    }
+    else {
+        threads.x = 1-24;
+        blocks.x = (size + 1023) / 1024;
+    }
+    matrix_add_kernel(n, input_data_a, input_data_b, output_data);
+    return 0;
 }
 
 __global__ void matrix_add_by_const_kernel(int n, const float *input_data, float val, float *output_data) {
