@@ -148,11 +148,11 @@ int DLGpuBroadcastTo(const DLArrayHandle input, DLArrayHandle output) {
 
 __global__ void reduce_sum_axis_zero_kernel(int n, int out, const float *input_data, float *output_data) {
     int y = blockIdx.x * blockDim.x + threadIdx.x;
-    if (y >= n) {
+    if (y >= out) {
         return;
     }
     output_data[y] = 0;
-    for (int i = y; i < out; i += out) {
+    for (int i = y; i < n; i += out) {
         output_data[y] += input_data[i];
     }
 }
@@ -171,13 +171,13 @@ int DLGpuReduceSumAxisZero(const DLArrayHandle input, DLArrayHandle output) {
     dim3 threads;
     float *output_data = (float *)output->data;
     const float *input_data = (const float *)input->data;
-    if (n <= 1024) {
-        threads.x = n;
+    if (out <= 1024) {
+        threads.x = out;
         blocks.x = 1;
     }
     else {
         threads.x = 1024;
-        blocks.x = (n + 1023) / 1024;
+        blocks.x = (out + 1023) / 1024;
     }
     reduce_sum_axis_zero_kernel<<<blocks, threads>>>(n, out, input_data, output_data);
     return 0;
@@ -324,11 +324,11 @@ __global__ void relu_kernel(int n, const float *input_data, float *output_data) 
     if (y >= n) {
         return;
     }
-    if (input_data[y] > 0) {
+    if (input_data[y] > 0.0) {
         output_data[y] = input_data[y];
     }
     else {
-        output_data[y] = 0;
+        output_data[y] = 0.0;
     }
 }
 
@@ -360,11 +360,11 @@ __global__ void relu_gradient_kernel(int n, const float *input_data, const float
     if (y >= n) {
         return;
     }
-    if (input_data[y] > 0) {
+    if (input_data[y] > 0.0) {
         output_data[y] = in_grad_data[y];
     }
     else {
-        output_data[y] = 0;
+        output_data[y] = 0.0;
     }
 }
 
@@ -394,11 +394,13 @@ int DLGpuReluGradient(const DLArrayHandle input, const DLArrayHandle in_grad,
 }
 
 __global__ void matrix_softmax_kernel(int nrow, int ncol, const float *input_data, float *output_data) {
-    int y = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;
+    /*int y = blockIdx.x * blockDim.x * blockDim.y + threadIdx.y * blockDim.x + threadIdx.x;*/
+    int y = threadIdx.y * blockDim.x + threadIdx.x;
     if (y >= nrow) {
         return;
     }
     input_data += y * ncol;
+    output_data += y * ncol;
     float maxval = *input_data;
     // Find max for a row.
     for (int x = 1; x < ncol; ++x) {
@@ -417,7 +419,6 @@ __global__ void matrix_softmax_kernel(int nrow, int ncol, const float *input_dat
 int DLGpuSoftmax(const DLArrayHandle input, DLArrayHandle output) {
   /* TODO: Your code here */
     assert(input->ndim == 2);
-    assert(output->ndim == 1);
     int nrow = input->shape[0];
   // Maximum x- or y-dimension of a block = 1024
   // But we need 'nrow' shared memory, and max shared memory is 48KB.
