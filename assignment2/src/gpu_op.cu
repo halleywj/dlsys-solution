@@ -268,12 +268,12 @@ int DLGpuMatrixElementwiseMultiply(const DLArrayHandle matA,
     const float *input_data_a = (const float *)matA->data;
     const float *input_data_b = (const float *)matB->data;
     if (n <= 1024) {
-        blocks.x = 1024;
-        threads.x = 1;
+        threads.x = 1024;
+        blocks.x = 1;
     }
     else {
-        blocks.x = 1024;
-        threads.x = (n + 1023) / 1024;
+        threads.x = 1024;
+        blocks.x = (n + 1023) / 1024;
     }
     matrix_ele_mul_kernel<<<blocks, threads>>>(n, input_data_a, input_data_b, output_data);
     return 0;
@@ -299,12 +299,12 @@ int DLGpuMatrixMultiplyByConst(const DLArrayHandle input, float val,
     float *output_data = (float *)output->data;
     const float *input_data = (const float *)input->data;
     if (n <= 1024) {
-        blocks.x = n;
-        threads.x = 1;
+        threads.x = n;
+        blocks.x = 1;
     }
     else {
-        blocks.x = 1024;
-        threads.x = (n + 1023) / 1024;
+        threads.x = 1024;
+        blocks.x = (n + 1023) / 1024;
     }
     matrix_mul_by_const_kernel<<<blocks, threads>>>(n, input_data, val, output_data);
     return 0;
@@ -343,12 +343,12 @@ int DLGpuRelu(const DLArrayHandle input, DLArrayHandle output) {
     float *output_data = (float *)output->data;
     const float *input_data = (const float *)input->data;
     if (n <= 1024) {
-        blocks.x = n;
-        threads.x = 1;
+        threads.x = n;
+        blocks.x = 1;
     }
     else {
-        blocks.x = 1024;
-        threads.x = (n + 1023) / 1024;
+        threads.x = 1024;
+        blocks.x = (n + 1023) / 1024;
     }
     relu_kernel<<<blocks, threads>>>(n, input_data, output_data);
     return 0;
@@ -381,12 +381,12 @@ int DLGpuReluGradient(const DLArrayHandle input, const DLArrayHandle in_grad,
     const float *input_data = (const float *)input->data;
     const float *in_grad_data = (const float *)in_grad->data;
     if (n <= 1024) {
-        blocks.x = n;
-        threads.x = 1;
+        threads.x = n;
+        blocks.x = 1;
     }
     else {
-        blocks.x = 1024;
-        threads.x = (n + 1023) / 1024;
+        threads.x = 1024;
+        blocks.x = (n + 1023) / 1024;
     }
     relu_gradient_kernel<<<blocks, threads>>>(n, input_data, in_grad_data, output_data);
     return 0;
