@@ -116,7 +116,7 @@ __global__ void broadcast_kernel(int n, int out, const float *input_data, float 
         return;
     }
     for (int i = y; i < out;i += n) {
-        output_data[i] = input_data[n];
+        output_data[i] = input_data[y];
     }
 }
 
