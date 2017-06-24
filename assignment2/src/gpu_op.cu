@@ -268,7 +268,7 @@ int DLGpuMatrixElementwiseMultiply(const DLArrayHandle matA,
     const float *input_data_a = (const float *)matA->data;
     const float *input_data_b = (const float *)matB->data;
     if (n <= 1024) {
-        threads.x = 1024;
+        threads.x = n;
         blocks.x = 1;
     }
     else {
