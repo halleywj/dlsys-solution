@@ -310,14 +310,55 @@ int DLGpuMatrixMultiplyByConst(const DLArrayHandle input, float val,
     return 0;
 }
 
+__global__ void MatMulKernel(const float *A, const float *B, float *C, int rowA, int colA, int rowB, int colB, bool transA, bool transB) {
+    float Cvalue = 0.0;
+    int r = blockIdx.y * blockDim.y + threadIdx.y;
+    int c = blockIdx.x * blockDim.x + threadIdx.x;
+    if(!transA && !transB){
+        assert(colA == rowB);
+        if(r >= rowA || c >= colB) return;
+        for (int e = 0; e < colA; ++e)
+            Cvalue += (A[r * colA + e]) * (B[e * colB + c]);
+        C[r * colB + c] = Cvalue;
+    }else if(transA && !transB){
+        if(r >= colA || c >= colB) return;
+        for (int e = 0; e < rowA; ++e)
+            Cvalue += (A[e * colA + r]) * (B[e * colB + c]);
+        C[r * colB + c] = Cvalue;
+    }else if(!transA && transB){
+        if(r >= rowA || c >= rowB) return;
+        for (int e = 0; e < colA; ++e)
+            Cvalue += (A[r * colA + e]) * (B[c * colB + e]);
+        C[r * rowB + c] = Cvalue;
+    }else if(transA && transB){
+        if(r >= colA || c >= rowB) return;
+        for (int e = 0; e < rowA; ++e)
+            Cvalue += (A[e * colA + r]) * (B[c * colB + e]);
+        C[r * rowB + c] = Cvalue;
+    }
+}
+
 int DLGpuMatrixMultiply(const DLArrayHandle matA, bool transposeA,
                         const DLArrayHandle matB, bool transposeB,
                         DLArrayHandle matC) {
   /* TODO: Your code here */
   // Hint: use cublas
   // cublas assume matrix is column major
-  return 0;
+    int rowA = matA->shape[0];
+    int colA = matA->shape[1];
+    int rowB = matB->shape[0];
+    int colB = matB->shape[1];
+    float *matC_data = (float *)matC->data;
+    const float *matA_data = (const float *)matA->data;
+    const float *matB_data = (const float *)matB->data;
+    const int BLOCK_SIZE = 16;
+    dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 dimGrid((max(rowB, colB) + dimBlock.x - 1) / dimBlock.x,
+            (max(rowA, colA) + dimBlock.y - 1) / dimBlock.y);
+    MatMulKernel<<<dimGrid, dimBlock>>>(matA_data, matB_data, matC_data, rowA, colA, rowB, colB, transposeA, transposeB);
+    return 0;
 }
+
 
 __global__ void relu_kernel(int n, const float *input_data, float *output_data) {
     int y = blockIdx.x * blockDim.x + threadIdx.x;

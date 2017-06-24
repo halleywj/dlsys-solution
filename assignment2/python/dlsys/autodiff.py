@@ -435,7 +435,7 @@ class ReduceSumAxisZeroOp(Op):
         assert len(input_shapes) == 1
         if len(input_shapes[0]) == 1:
             return (1,)
-        return input_shapes[1:]
+        return input_shapes[0][1:]
 
 
 class BroadcastToOp(Op):
